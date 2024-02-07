@@ -44,6 +44,12 @@ class GameViewModel : ViewModel() {
     val playerHaveBlackJack: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
+    val gameInProgressLiveData: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
+    val BetInProgressLiveData: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
     //endregion
 
 

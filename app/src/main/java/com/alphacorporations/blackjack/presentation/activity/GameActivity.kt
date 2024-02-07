@@ -181,6 +181,16 @@ class GameActivity : AppCompatActivity() {
             playerAdapter.clear()
             dealerAdapter.clear()
         }
+
+        gameViewModel.gameInProgressLiveData.observe(this) {
+            binding.ActionBtn.visibility = View.VISIBLE
+        }
+
+        gameViewModel.BetInProgressLiveData.observe(this) {
+            binding.ActionBtn.visibility = View.INVISIBLE
+            binding.BetCoinsBtn.visibility = View.VISIBLE
+
+        }
     }
 
     private fun stand() {
