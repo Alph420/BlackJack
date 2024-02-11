@@ -1,5 +1,6 @@
 package com.alphacorporations.blackjack.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,13 +24,16 @@ class GameViewModel : ViewModel() {
 
     var deck = ArrayList<Card>()
 
-    private var isPlayerTurn = false
+    private var isPlayerTurn = true
     private var isDealerTurn = false
 
     private val rand = Random()
 
     //region LIVEDATA
     val playerScoreLiveData: MutableLiveData<String> by lazy {
+        MutableLiveData<String>()
+    }
+    val dealerScoreLiveData: MutableLiveData<String> by lazy {
         MutableLiveData<String>()
     }
     val clearAdaptersLiveData: MutableLiveData<Boolean> by lazy {
@@ -44,10 +48,25 @@ class GameViewModel : ViewModel() {
     val playerHaveBlackJack: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
+    val dealerHaveBlackJack: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
     val gameInProgressLiveData: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
     val BetInProgressLiveData: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
+    val playerCanHit: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
+    val dealerCanHit: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
+    val playerIsBusted: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
+    val dealerIsBusted: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
     //endregion
@@ -61,6 +80,8 @@ class GameViewModel : ViewModel() {
         if (isPlayerTurn) {
             playerCards.add(getCardAndRemoveItFromDeck(true))
             calculateScore()
+        } else {
+            calculateScore(true)
         }
     }
 
@@ -92,41 +113,115 @@ class GameViewModel : ViewModel() {
 
     fun initHands() {
         playerCards.add(getCardAndRemoveItFromDeck(true))
+        calculateScore()
         dealerCards.add(getCardAndRemoveItFromDeck(true))
+        calculateScore(true)
         playerCards.add(getCardAndRemoveItFromDeck(true))
         dealerCards.add(getCardAndRemoveItFromDeck(false))
         initHandsLiveData.postValue(true)
         calculateScore()
-
     }
 
-    private fun calculateScore() {
+    private fun calculateScore(isDealerHands: Boolean = false) {
         var score = 0
         var haveAce = false
+        val hand = if (isDealerHands) dealerCards else playerCards
 
-        playerCards.map {
+        hand.map {
             if (it.isAce) haveAce = true
             score += it.value
         }
 
         if (haveAce) {
             if (score + 10 == 21) {
-                playerHaveBlackJack.postValue(true)
-                playerScoreLiveData.postValue("21")
+                if (isDealerHands) {
+                    dealerHaveBlackJack.postValue(true)
+                    dealerCanHit.postValue(false)
+                    dealerScoreLiveData.postValue("21")
+                } else {
+                    playerHaveBlackJack.postValue(true)
+                    playerCanHit.postValue(false)
+                    playerScoreLiveData.postValue("21")
+                }
+
                 return
+            } else if (score + 10 > 21) {
+                if (isDealerHands) {
+                    if (score > 21) {
+                        dealerIsBusted.postValue(true)
+                        dealer.isBusted = true
+                    }
+                    dealerScoreLiveData.postValue(score.toString())
+
+                } else {
+                    if (score > 21) {
+                        playerIsBusted.postValue(true)
+                        player.isBusted = true
+                        isPlayerTurn = false
+                        isDealerTurn = true
+                    }
+                }
+                playerScoreLiveData.postValue(score.toString())
+            } else {
+                if (isDealerHands) {
+                    if (dealerCards.size == 2 && !dealerCards[1].isVisible) {
+                        dealerScoreLiveData.postValue("$score")
+
+                    } else {
+                        dealerScoreLiveData.postValue("$score/${score + 10}")
+
+                    }
+
+                } else {
+                    playerScoreLiveData.postValue("$score/${score + 10}")
+
+                }
+
             }
-            playerScoreLiveData.postValue("$score/${score + 10}")
         } else {
-            if (score > 21) {
-                player.isBusted = true
 
-                isPlayerTurn = false
-                isDealerTurn = true
+            if (score > 21) {
+                if (isDealerHands) {
+                    dealerIsBusted.postValue(true)
+                    dealer.isBusted = true
+                } else {
+                    playerIsBusted.postValue(true)
+                    player.isBusted = true
+                    isPlayerTurn = false
+                    isDealerTurn = true
+                }
 
             }
-            playerScoreLiveData.postValue(score.toString())
+            if (isDealerHands)
+                dealerScoreLiveData.value = score.toString()
+            else
+                playerScoreLiveData.value = score.toString()
 
         }
+    }
+
+    fun dealerReveal() {
+        dealerCards.map {
+            it.isVisible = true
+        }
+        calculateScore(true)
+        if (dealerScoreLiveData.value!!.toInt() <= 17) {
+            dealerCards.add(getCardAndRemoveItFromDeck(true))
+            calculateScore(true)
+
+        }
+    }
+
+    fun endGame() {
+        var playerScore = 0
+        var dealerScore = 0
+        playerCards.map { playerScore += it.value }
+        dealerCards.map { dealerScore += it.value }
+
+        val winner = if (dealer.isBusted && playerScore <= 21) "Player" else "Dealer"
+
+        Log.d("winner is", winner)
+
     }
 
     private fun getCardAndRemoveItFromDeck(isVisibleCard: Boolean): Card {
@@ -142,6 +237,7 @@ class GameViewModel : ViewModel() {
         deck.clear()
         playerCards.clear()
         dealerCards.clear()
+        playerCanHit.postValue(true)
         resetUILiveData.postValue(true)
         clearAdaptersLiveData.postValue(true)
     }

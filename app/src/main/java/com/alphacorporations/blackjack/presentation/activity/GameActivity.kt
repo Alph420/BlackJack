@@ -137,6 +137,7 @@ class GameActivity : AppCompatActivity() {
             gameViewModel.hit()
         }
         binding.stand.setOnClickListener {
+            binding.ActionBtn.visibility = View.GONE
             stand()
         }
         binding.doublation.setOnClickListener {
@@ -152,7 +153,6 @@ class GameActivity : AppCompatActivity() {
         }
 
         binding.bet.setOnClickListener {
-
             initGame()
         }
 
@@ -162,15 +162,30 @@ class GameActivity : AppCompatActivity() {
 
         gameViewModel.resetUILiveData.observe(this) {
             binding.BJ.visibility = View.INVISIBLE
+            binding.ActionBtn.visibility = View.VISIBLE
         }
 
         gameViewModel.playerHaveBlackJack.observe(this) {
-            if (it) binding.BJ.visibility = View.VISIBLE
-            else binding.BJ.visibility = View.INVISIBLE
+            if (it){
+                binding.BJ.visibility = View.VISIBLE
+                binding.ActionBtn.visibility = View.GONE
+
+            }
+            else{
+                binding.BJ.visibility = View.INVISIBLE
+            }
         }
 
         gameViewModel.playerScoreLiveData.observe(this) {
-            binding.score.text = it.toString()
+            binding.playerScore.text = it.toString()
+            updateUI()
+        }
+        gameViewModel.dealerScoreLiveData.observe(this) {
+            binding.dealerScore.text = it.toString()
+            if (it.toInt()>17){
+                gameViewModel.endGame()
+            }
+            updateUI()
         }
         gameViewModel.initHandsLiveData.observe(this) {
             playerAdapter.setDataList(gameViewModel.playerCards)
@@ -191,15 +206,28 @@ class GameActivity : AppCompatActivity() {
             binding.BetCoinsBtn.visibility = View.VISIBLE
 
         }
+
+        gameViewModel.playerCanHit.observe(this){
+            binding.hit.isEnabled = it
+        }
+
+        gameViewModel.playerIsBusted.observe(this){
+            if (it){
+                binding.hit.isEnabled = false
+                gameViewModel.dealerReveal()
+                binding.ActionBtn.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun updateUI(){
+        playerAdapter.setDataList(gameViewModel.playerCards)
+        dealerAdapter.setDataList(gameViewModel.dealerCards)
     }
 
     private fun stand() {
         if (isPlayerTurn) isPlayerTurn = false
-        dealerHit()
-    }
-
-    private fun dealerHit() {
-
+       gameViewModel.dealerReveal()
     }
 
 
