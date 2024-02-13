@@ -69,6 +69,9 @@ class GameViewModel : ViewModel() {
     val dealerIsBusted: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
+    val winnerLiveData: MutableLiveData<String> by lazy {
+        MutableLiveData<String>()
+    }
     //endregion
 
 
@@ -122,7 +125,7 @@ class GameViewModel : ViewModel() {
         calculateScore()
     }
 
-    private fun calculateScore(isDealerHands: Boolean = false) {
+    private fun calculateScore2(isDealerHands: Boolean = false) {
         var score = 0
         var haveAce = false
         val hand = if (isDealerHands) dealerCards else playerCards
@@ -138,13 +141,15 @@ class GameViewModel : ViewModel() {
                     dealerHaveBlackJack.postValue(true)
                     dealerCanHit.postValue(false)
                     dealerScoreLiveData.postValue("21")
+                    return
+
                 } else {
                     playerHaveBlackJack.postValue(true)
                     playerCanHit.postValue(false)
                     playerScoreLiveData.postValue("21")
+                    return
                 }
 
-                return
             } else if (score + 10 > 21) {
                 if (isDealerHands) {
                     if (score > 21) {
@@ -192,12 +197,98 @@ class GameViewModel : ViewModel() {
                 }
 
             }
-            if (isDealerHands)
+            if (isDealerHands) {
                 dealerScoreLiveData.value = score.toString()
-            else
+            } else {
                 playerScoreLiveData.value = score.toString()
+            }
 
         }
+    }
+
+    fun calculateScore(isDealerHands: Boolean = false) {
+
+        val hand = if (isDealerHands) dealerCards else playerCards
+        var score = 0
+        var hasAce = false
+
+        for (card in hand) {
+            val adjustedValue = when (card.value) {
+                1 -> if (score < 11) 11 else 1 // Adjust ace value based on total score
+                else -> card.value
+            }
+            score += adjustedValue
+            hasAce = hasAce || card.isAce
+        }
+
+        // Update appropriate Live Data based on hand type and score
+        if (isDealerHands) {
+            if (score == 21 && hand.size == 2) {
+                dealerHaveBlackJack.postValue(true)
+                dealerCanHit.postValue(false)
+                dealerScoreLiveData.value = "21"
+            } else {
+                dealerScoreLiveData.value = score.toString()
+            }
+            if (score > 21) {
+                dealerIsBusted.postValue(true)
+                dealer.isBusted = true
+            }
+        } else {
+            if (score == 21 && hand.size == 2) {
+                playerHaveBlackJack.postValue(true)
+                playerCanHit.postValue(false)
+                playerScoreLiveData.postValue("21")
+            } else {
+                if (hasAce) {
+                    if (score + 10 > 21) {
+                        playerScoreLiveData.postValue("$score")
+
+                    } else {
+                        playerScoreLiveData.postValue("${score}/${score + 10}")
+
+                    }
+                } else {
+                    playerScoreLiveData.postValue(score.toString())
+                }
+            }
+            if (score > 21) {
+                playerIsBusted.postValue(true)
+                player.isBusted = true
+                isPlayerTurn = false
+                isDealerTurn = true
+            }
+        }
+    }
+
+    private fun getDealerScore(): Int {
+
+        var score = 0
+        var hasAce = false
+
+        for (card in dealerCards) {
+            val adjustedValue = when (card.value) {
+                1 -> if (score < 11) 11 else 1 // Adjust ace value based on total score
+                else -> card.value
+            }
+            score += adjustedValue
+            hasAce = hasAce || card.isAce
+        }
+
+        if (score == 21 && dealerCards.size == 2) {
+            dealerHaveBlackJack.postValue(true)
+            dealerCanHit.postValue(false)
+            dealerScoreLiveData.postValue("21")
+        } else {
+            dealerScoreLiveData.postValue(score.toString())
+        }
+        if (score > 21) {
+            dealerIsBusted.postValue(true)
+            dealer.isBusted = true
+        }
+        calculateScore(true)
+
+        return score
     }
 
     fun dealerReveal() {
@@ -205,23 +296,37 @@ class GameViewModel : ViewModel() {
             it.isVisible = true
         }
         calculateScore(true)
-        if (dealerScoreLiveData.value!!.toInt() <= 17) {
-            dealerCards.add(getCardAndRemoveItFromDeck(true))
-            calculateScore(true)
 
+        if (getDealerScore() <= 17 && !player.isBusted && playerHaveBlackJack.value == false) {
+            dealerCards.add(getCardAndRemoveItFromDeck(true))
+        } else {
+            endGame()
         }
+        calculateScore(true)
+
     }
 
     fun endGame() {
-        var playerScore = 0
-        var dealerScore = 0
-        playerCards.map { playerScore += it.value }
-        dealerCards.map { dealerScore += it.value }
+        var playerScore = playerScoreLiveData.value!!.toInt()
+        var dealerScore = dealerScoreLiveData.value!!.toInt()
 
-        val winner = if (dealer.isBusted && playerScore <= 21) "Player" else "Dealer"
+        lateinit var winner: String
+
+
+        if (dealer.isBusted && playerScore <= 21) winner = "Player"
+        else if (player.isBusted && dealerScore <= 21) winner = "Dealer"
+        else if (dealerScore == playerScore) {
+            winner = "Push"
+        } else if (dealerScore > playerScore) {
+            winner = "Dealer"
+
+        } else if (playerScore > dealerScore) {
+            winner = "Player"
+        }
+
 
         Log.d("winner is", winner)
-
+        winnerLiveData.postValue(winner)
     }
 
     private fun getCardAndRemoveItFromDeck(isVisibleCard: Boolean): Card {
@@ -240,5 +345,9 @@ class GameViewModel : ViewModel() {
         playerCanHit.postValue(true)
         resetUILiveData.postValue(true)
         clearAdaptersLiveData.postValue(true)
+
+        player.isBusted = false
+        isPlayerTurn = true
+        isDealerTurn = false
     }
 }

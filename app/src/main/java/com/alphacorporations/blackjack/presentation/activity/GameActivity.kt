@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import com.alphacorporations.blackjack.R
 import com.alphacorporations.blackjack.databinding.ActivityGameBinding
 import com.alphacorporations.blackjack.presentation.CardAdapter
 import com.alphacorporations.blackjack.viewmodel.GameViewModel
@@ -161,17 +162,18 @@ class GameActivity : AppCompatActivity() {
     private fun initObserver() {
 
         gameViewModel.resetUILiveData.observe(this) {
-            binding.BJ.visibility = View.INVISIBLE
-            binding.ActionBtn.visibility = View.VISIBLE
+            if (it) {
+                resetUI()
+            }
         }
 
         gameViewModel.playerHaveBlackJack.observe(this) {
-            if (it){
+            if (it) {
                 binding.BJ.visibility = View.VISIBLE
                 binding.ActionBtn.visibility = View.GONE
+                gameViewModel.dealerReveal()
 
-            }
-            else{
+            } else {
                 binding.BJ.visibility = View.INVISIBLE
             }
         }
@@ -182,7 +184,7 @@ class GameActivity : AppCompatActivity() {
         }
         gameViewModel.dealerScoreLiveData.observe(this) {
             binding.dealerScore.text = it.toString()
-            if (it.toInt()>17){
+            if (it.toInt() > 17) {
                 gameViewModel.endGame()
             }
             updateUI()
@@ -207,27 +209,81 @@ class GameActivity : AppCompatActivity() {
 
         }
 
-        gameViewModel.playerCanHit.observe(this){
+        gameViewModel.playerCanHit.observe(this) {
             binding.hit.isEnabled = it
         }
 
-        gameViewModel.playerIsBusted.observe(this){
-            if (it){
-                binding.hit.isEnabled = false
-                gameViewModel.dealerReveal()
+        gameViewModel.playerIsBusted.observe(this) {
+            if (it) {
                 binding.ActionBtn.visibility = View.GONE
+                binding.playerScoreCardView.backgroundTintList =
+                    resources.getColorStateList(R.color.red)
+                gameViewModel.dealerReveal()
             }
+        }
+
+        gameViewModel.dealerIsBusted.observe(this) {
+            if (it) {
+                binding.dealerScoreCardView.backgroundTintList =
+                    resources.getColorStateList(R.color.red)
+                playerWin()
+            }
+        }
+
+        gameViewModel.winnerLiveData.observe(this) { winner ->
+            when (winner) {
+                "Player" -> {
+                    playerWin()
+
+                }
+
+                "Dealer" -> {
+                    dealerWin()
+
+                }
+
+                "Push" -> {
+                    push()
+                }
+            }
+
         }
     }
 
-    private fun updateUI(){
+    private fun playerWin() {
+        binding.playerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.green)
+        binding.dealerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.red)
+    }
+
+    private fun dealerWin() {
+        binding.dealerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.green)
+        binding.playerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.red)
+    }
+
+    private fun push() {
+        binding.dealerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.yellow)
+        binding.playerScoreCardView.backgroundTintList = resources.getColorStateList(R.color.yellow)
+
+    }
+
+    private fun updateUI() {
         playerAdapter.setDataList(gameViewModel.playerCards)
         dealerAdapter.setDataList(gameViewModel.dealerCards)
     }
 
     private fun stand() {
         if (isPlayerTurn) isPlayerTurn = false
-       gameViewModel.dealerReveal()
+        gameViewModel.dealerReveal()
+    }
+
+    private fun resetUI() {
+        binding.BJ.visibility = View.INVISIBLE
+        binding.ActionBtn.visibility = View.VISIBLE
+        binding.playerScoreCardView.backgroundTintList =
+            resources.getColorStateList(R.color.black_200)
+        binding.dealerScoreCardView.backgroundTintList =
+            resources.getColorStateList(R.color.black_200)
+
     }
 
 

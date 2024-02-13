@@ -9,7 +9,7 @@
 
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/cardView4"
+        android:id="@+id/dealerScoreCardView"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:backgroundTint="@color/black_200"
@@ -72,7 +72,7 @@
 
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/cardView3"
+        android:id="@+id/playerScoreCardView"
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_marginBottom="-16dp"
@@ -107,9 +107,9 @@
         android:layout_height="50dp"
         android:layout_marginBottom="-25dp"
         android:visibility="visible"
-        app:layout_constraintBottom_toTopOf="@+id/cardView3"
-        app:layout_constraintEnd_toEndOf="@+id/cardView3"
-        app:layout_constraintStart_toStartOf="@+id/cardView3"
+        app:layout_constraintBottom_toTopOf="@+id/playerScoreCardView"
+        app:layout_constraintEnd_toEndOf="@+id/playerScoreCardView"
+        app:layout_constraintStart_toStartOf="@+id/playerScoreCardView"
         app:srcCompat="@drawable/ic_jackpot" />
 
 
