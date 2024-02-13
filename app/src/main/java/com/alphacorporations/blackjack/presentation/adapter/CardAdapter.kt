@@ -1,4 +1,4 @@
-package com.alphacorporations.blackjack.presentation
+package com.alphacorporations.blackjack.presentation.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -50,6 +50,10 @@ class CardAdapter : RecyclerView.Adapter<CardAdapter.CardViewHolder>() {
             )
         }
 
+    }
+
+    fun getCard(index: Int): Card {
+        return dataList[index]
     }
 
     fun setDataList(equipment: List<Card>) {

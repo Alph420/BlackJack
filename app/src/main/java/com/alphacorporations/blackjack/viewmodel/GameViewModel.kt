@@ -72,6 +72,9 @@ class GameViewModel : ViewModel() {
     val winnerLiveData: MutableLiveData<String> by lazy {
         MutableLiveData<String>()
     }
+    val revealSecondDealerCard: MutableLiveData<Boolean> by lazy {
+        MutableLiveData<Boolean>()
+    }
     //endregion
 
 
@@ -295,14 +298,14 @@ class GameViewModel : ViewModel() {
         dealerCards.map {
             it.isVisible = true
         }
-        calculateScore(true)
+
+        revealSecondDealerCard.postValue(true)
 
         if (getDealerScore() <= 17 && !player.isBusted && playerHaveBlackJack.value == false) {
             dealerCards.add(getCardAndRemoveItFromDeck(true))
         } else {
             endGame()
         }
-        calculateScore(true)
 
     }
 

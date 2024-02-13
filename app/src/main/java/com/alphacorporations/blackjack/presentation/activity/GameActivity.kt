@@ -1,14 +1,17 @@
 package com.alphacorporations.blackjack.presentation.activity
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.lifecycle.ViewModelProvider
 import com.alphacorporations.blackjack.R
 import com.alphacorporations.blackjack.databinding.ActivityGameBinding
-import com.alphacorporations.blackjack.presentation.CardAdapter
+import com.alphacorporations.blackjack.presentation.adapter.CardAdapter
 import com.alphacorporations.blackjack.viewmodel.GameViewModel
 import com.alphacorporations.blackjack.viewmodel.MainViewModel
 
@@ -73,62 +76,8 @@ class GameActivity : AppCompatActivity() {
 
         gameViewModel.initDeck()
 
-
-
         isPlayerTurn = true
 
-        /* for (i in 0 until 4) {
-             r = rand.nextInt(cardList.size)
-             id = cardList[r]
-             val name = resources.getResourceEntryName(id)
-             // add card one by one
-             if (i % 2 == 0) {
-                 player.addCard(name)
-                 val cardValue = findCardValue(name)
-                 player.getTotal(cardValue)
-                 if (cardValue == 11 && !player.ace) player.ace = true
-                 else if (cardValue == 11 && player.ace) {
-                     player.totalScore -= 10
-                     player.ace = false
-                 }
-                 binding.score.text = "Score: " + player.totalScore
-                 val x = playerCards[index].x
-                 playerCards[index].translationX = -x;
-                 playerCards[index].setImageResource(id)
-                 moveTo(playerCards[index], 0f, 0f);
-             } else {
-                 dealer.addCard(name)
-                 // who first one by one
-                 if (dealerFirst) {
-                     dealerFirstCard = id
-                     dealerFirst = false
-                 }
-                 val cardValue = findCardValue(name)
-                 if (cardValue == 11 && !dealer.ace) dealer.ace = true
-                 else if (cardValue == 11 && dealer.ace) {
-                     dealer.totalScore -= 10
-                     dealer.ace = false
-                 }
-                 dealer.getTotal(cardValue)
-
-                 if (index == 0) {
-                     //figuring out how to make first card back.png
-                     val x = dealerCards[index].x
-                     dealerCards[index].translationX = -x;
-                     dealerCards[index].setImageResource(R.drawable.back)
-                     moveTo(dealerCards[index], 0f, 0f);
-                     store = id
-                 } else {
-                     val x = playerCards[index].x
-                     playerCards[index].translationX = -x;
-                     dealerCards[index].setImageResource(id)
-                     moveTo(playerCards[index], 0f, 0f);
-                 }
-                 index++
-                 dealerIndex++
-             }
-             cardList.remove(id)
-         }*/
     }
 
 
@@ -187,7 +136,6 @@ class GameActivity : AppCompatActivity() {
             if (it.toInt() > 17) {
                 gameViewModel.endGame()
             }
-            updateUI()
         }
         gameViewModel.initHandsLiveData.observe(this) {
             playerAdapter.setDataList(gameViewModel.playerCards)
@@ -248,6 +196,32 @@ class GameActivity : AppCompatActivity() {
             }
 
         }
+
+        gameViewModel.revealSecondDealerCard.observe(this) {
+            if (it) flipCard()
+        }
+    }
+
+    private fun flipCard() {
+        var card =
+            binding.dealerCards.findViewHolderForAdapterPosition(1)?.itemView as? AppCompatImageView
+
+        var firstAnimation = ObjectAnimator.ofFloat(card, "scaleX", -1f, 0f)
+        var secondAnimation = ObjectAnimator.ofFloat(card, "scaleX", 0f, 1f)
+
+        firstAnimation.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                super.onAnimationEnd(animation)
+                updateUI()
+                secondAnimation.start()
+
+            }
+        })
+
+        firstAnimation.start()
+        firstAnimation.duration = 250
+        secondAnimation.duration = 250
+
     }
 
     private fun playerWin() {
