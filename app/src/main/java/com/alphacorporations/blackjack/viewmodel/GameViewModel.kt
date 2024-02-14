@@ -19,7 +19,6 @@ class GameViewModel : ViewModel() {
     var dealer = Player()
 
     val playerCards = ArrayList<Card>()
-    val dealerCards = ArrayList<Card>()
 
 
     var deck = ArrayList<Card>()
@@ -75,6 +74,7 @@ class GameViewModel : ViewModel() {
     val revealSecondDealerCard: MutableLiveData<Boolean> by lazy {
         MutableLiveData<Boolean>()
     }
+    val dealerCards: MutableLiveData<MutableList<Card>> = MutableLiveData(mutableListOf())
     //endregion
 
 
@@ -120,10 +120,10 @@ class GameViewModel : ViewModel() {
     fun initHands() {
         playerCards.add(getCardAndRemoveItFromDeck(true))
         calculateScore()
-        dealerCards.add(getCardAndRemoveItFromDeck(true))
+        dealerCards.value!!.add(getCardAndRemoveItFromDeck(true))
         calculateScore(true)
         playerCards.add(getCardAndRemoveItFromDeck(true))
-        dealerCards.add(getCardAndRemoveItFromDeck(false))
+        dealerCards.value!!.add(getCardAndRemoveItFromDeck(false))
         initHandsLiveData.postValue(true)
         calculateScore()
     }
@@ -131,7 +131,7 @@ class GameViewModel : ViewModel() {
     private fun calculateScore2(isDealerHands: Boolean = false) {
         var score = 0
         var haveAce = false
-        val hand = if (isDealerHands) dealerCards else playerCards
+        val hand = if (isDealerHands) dealerCards.value!! else playerCards
 
         hand.map {
             if (it.isAce) haveAce = true
@@ -147,7 +147,7 @@ class GameViewModel : ViewModel() {
                     return
 
                 } else {
-                    playerHaveBlackJack.postValue(true)
+                    playerHaveBlackJack.value = true
                     playerCanHit.postValue(false)
                     playerScoreLiveData.postValue("21")
                     return
@@ -172,7 +172,7 @@ class GameViewModel : ViewModel() {
                 playerScoreLiveData.postValue(score.toString())
             } else {
                 if (isDealerHands) {
-                    if (dealerCards.size == 2 && !dealerCards[1].isVisible) {
+                    if (dealerCards.value!!.size == 2 && !dealerCards.value!![1].isVisible) {
                         dealerScoreLiveData.postValue("$score")
 
                     } else {
@@ -211,7 +211,7 @@ class GameViewModel : ViewModel() {
 
     fun calculateScore(isDealerHands: Boolean = false) {
 
-        val hand = if (isDealerHands) dealerCards else playerCards
+        val hand = if (isDealerHands) dealerCards.value!! else playerCards
         var score = 0
         var hasAce = false
 
@@ -264,12 +264,20 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun playerDouble() {
+        playerCards.add(getCardAndRemoveItFromDeck(true))
+        calculateScore()
+        playerCanHit.postValue(false)
+        //TODO double the bet amount
+        isPlayerTurn = false
+    }
+
     private fun getDealerScore(): Int {
 
         var score = 0
         var hasAce = false
 
-        for (card in dealerCards) {
+        for (card in dealerCards.value!!) {
             val adjustedValue = when (card.value) {
                 1 -> if (score < 11) 11 else 1 // Adjust ace value based on total score
                 else -> card.value
@@ -278,7 +286,7 @@ class GameViewModel : ViewModel() {
             hasAce = hasAce || card.isAce
         }
 
-        if (score == 21 && dealerCards.size == 2) {
+        if (score == 21 && dealerCards.value!!.size == 2) {
             dealerHaveBlackJack.postValue(true)
             dealerCanHit.postValue(false)
             dealerScoreLiveData.postValue("21")
@@ -295,18 +303,24 @@ class GameViewModel : ViewModel() {
     }
 
     fun dealerReveal() {
-        dealerCards.map {
+        dealerCards.value!!.map {
             it.isVisible = true
         }
 
-        revealSecondDealerCard.postValue(true)
 
         if (getDealerScore() <= 17 && !player.isBusted && playerHaveBlackJack.value == false) {
-            dealerCards.add(getCardAndRemoveItFromDeck(true))
+            revealSecondDealerCard.postValue(true)
+            dealerCards.value!!.add(getCardAndRemoveItFromDeck(true))
+            if (getDealerScore() < 17 && !player.isBusted) {
+                dealerCards.value!!.add(getCardAndRemoveItFromDeck(true))
+                calculateScore2(true)
+            } else {
+                endGame()
+            }
         } else {
+            revealSecondDealerCard.postValue(true)
             endGame()
         }
-
     }
 
     fun endGame() {
@@ -344,13 +358,19 @@ class GameViewModel : ViewModel() {
     fun reset() {
         deck.clear()
         playerCards.clear()
-        dealerCards.clear()
+        dealerCards.value!!.clear()
+
         playerCanHit.postValue(true)
         resetUILiveData.postValue(true)
         clearAdaptersLiveData.postValue(true)
 
+        playerHaveBlackJack.value = false
         player.isBusted = false
+
         isPlayerTurn = true
         isDealerTurn = false
+
+        playerScoreLiveData.value = ""
+        dealerScoreLiveData.value = ""
     }
 }

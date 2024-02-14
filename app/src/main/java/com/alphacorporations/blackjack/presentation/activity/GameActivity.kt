@@ -91,7 +91,8 @@ class GameActivity : AppCompatActivity() {
             stand()
         }
         binding.doublation.setOnClickListener {
-
+            binding.ActionBtn.visibility = View.GONE
+            gameViewModel.playerDouble()
         }
         binding.split.setOnClickListener {
 
@@ -133,13 +134,14 @@ class GameActivity : AppCompatActivity() {
         }
         gameViewModel.dealerScoreLiveData.observe(this) {
             binding.dealerScore.text = it.toString()
-            if (it.toInt() > 17) {
-                gameViewModel.endGame()
-            }
+            updateUI()
         }
         gameViewModel.initHandsLiveData.observe(this) {
-            playerAdapter.setDataList(gameViewModel.playerCards)
-            dealerAdapter.setDataList(gameViewModel.dealerCards)
+            updateUI()
+        }
+
+        gameViewModel.dealerCards.observe(this) {
+            updateUI()
         }
 
         gameViewModel.clearAdaptersLiveData.observe(this) {
@@ -159,6 +161,8 @@ class GameActivity : AppCompatActivity() {
 
         gameViewModel.playerCanHit.observe(this) {
             binding.hit.isEnabled = it
+
+            if (it == false) gameViewModel.dealerReveal()
         }
 
         gameViewModel.playerIsBusted.observe(this) {
@@ -242,7 +246,7 @@ class GameActivity : AppCompatActivity() {
 
     private fun updateUI() {
         playerAdapter.setDataList(gameViewModel.playerCards)
-        dealerAdapter.setDataList(gameViewModel.dealerCards)
+        dealerAdapter.setDataList(gameViewModel.dealerCards.value!!)
     }
 
     private fun stand() {
